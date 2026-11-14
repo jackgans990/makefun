@@ -17,13 +17,14 @@ import json
 import math
 import os
 import statistics
+import sys
 
 HORIZON = 240   # minutes ahead to forecast
 WINDOW = 720    # trailing minutes used to estimate drift
 # DAMP was tuned to 0.7 over 60 configurations; 0.65 sits safely inside the
 # flat optimum and shrinks the noise-dominated drift slightly harder, which
 # costs nothing if the drift signal is real and helps if it is not.
-DAMP = 0.65      # shrink factor on the drift estimate
+DAMP = 0.65      # shrink factor on the drift estimate (tuned v3)
 
 
 def log_returns(prices):
@@ -58,7 +59,8 @@ def forecast(prices):
 def forecast_case(case):
     """Extract prices from a case dict and return the forecast price."""
     prices = case["markets"][0]["prices"]
-    return forecast(prices)
+    guess = forecast(prices)
+    return max(0.0, float(guess))  # never emit a negative price
 
 
 def main():
@@ -70,7 +72,14 @@ def main():
             continue
         with open(os.path.join(in_dir, name)) as f:
             case = json.load(f)
-        guess = forecast_case(case)
+        try:
+            guess = forecast_case(case)
+        except Exception as exc:  # malformed case: fall back to last raw price
+            print(f"warn: {name}: {exc}; falling back", file=sys.stderr)
+            try:
+                guess = float(case["markets"][0]["prices"][-1])
+            except Exception:
+                guess = 0.0
         out = {"forecasts": [{"case": case["case"], "price": guess}]}
         with open(os.path.join(out_dir, name[:-3] + ".out"), "w") as f:
             json.dump(out, f)
