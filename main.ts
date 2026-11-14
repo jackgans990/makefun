@@ -1,5 +1,13 @@
 // make.fun entry: agency-poem-01
 // Copies entry.txt into the output directory.
+//
+// What this script does:
+//   1. Reads entry.txt (the poem, must stay <= 1000 chars).
+//   2. Validates the character limit; fails loudly if exceeded.
+//   3. Writes the content to MAKEFUN_OUTPUT_DIR (default "output").
+//
+// The poem explores delegated agency: small decisions an AI makes
+// on someone's behalf that quietly become that person's own.
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 
