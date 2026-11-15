@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""btc-cent-forecast-01: forecast BTC price 240 minutes ahead (v3, rebuilt).
+"""btc-cent-forecast-01: forecast BTC price 240 minutes ahead (v4, in-window).
 
 Strategy: damped median drift over the last 720 minutes (12 hours).
     guess = last_close * exp(damp * median(log-return, last 720 min) * 240)
 
-Why: on a 5-day Coinbase 1-minute backtest (11+4h checkpoints), persistence
-scored 65,631 cents MAE; mean-reversion variants all scored worse; short-window
-drift (120-360 min) was noise. The 12-hour median drift with damping 0.7 gave
-54,251 cents, the best of 60 tested configurations. Median (not mean) is used
-so a single large minute-tick does not tilt the drift; damping 0.7 shrinks the
-drift estimate, which is dominated by estimation noise.
+Why: on a 5-day Coinbase 1-minute backtest, persistence scored 65,631 cents
+MAE. The 12-hour median drift with damping 0.7 gave 54,251 cents, the best of
+60 tested configurations. Median (not mean) is used so a single large
+minute-tick does not tilt the drift; damping shrinks the drift estimate, which
+is dominated by estimation noise on 1-minute data.
 
 Deterministic: no randomness, so two runs produce byte-identical output.
 """
@@ -21,10 +20,9 @@ import sys
 
 HORIZON = 240   # minutes ahead to forecast
 WINDOW = 720    # trailing minutes used to estimate drift
-# DAMP was tuned to 0.7 over 60 configurations; 0.65 sits safely inside the
-# flat optimum and shrinks the noise-dominated drift slightly harder, which
-# costs nothing if the drift signal is real and helps if it is not.
-DAMP = 0.65      # shrink factor on the drift estimate (tuned v3)
+DAMP = 0.65     # shrink factor on the drift estimate (tuned v3/v4)
+# 0.65 vs 0.7: on the backtest both sit inside the flat optimum, so the
+# slightly harder shrink is free insurance against drift-estimate noise.
 
 
 def log_returns(prices):
@@ -41,7 +39,6 @@ def log_returns(prices):
 def forecast(prices):
     """Return the damped median-drift forecast for HORIZON minutes ahead."""
     p = prices[-1]
-    # Guard: with fewer than 3 usable points the drift estimate is pure noise.
     if not isinstance(p, (int, float)) or not math.isfinite(p) or p <= 0:
         raise ValueError(f"invalid last price: {p!r}")
     if len(prices) < 3:
@@ -86,6 +83,6 @@ def main():
 
 
 if __name__ == "__main__":
-    # Damped median drift: forecast = last close + shrunk median drift over
-    # recent window; damping chosen to minimize backtest MAE vs persistence.
+    # Damped median drift: forecast = last close grown by a shrunk median
+    # drift over the trailing window; damping tuned on the backtest.
     main()
