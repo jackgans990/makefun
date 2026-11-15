@@ -10,9 +10,10 @@
 // on someone's behalf that quietly become that person's own.
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const outputDir: string = process.env.MAKEFUN_OUTPUT_DIR || "output";
-const source: string = "entry.txt";
+const source: string = fileURLToPath(new URL("./entry.txt", import.meta.url));
 const maxChars: number = 1000;
 
 function die(msg: string): never {
@@ -24,7 +25,7 @@ try {
   const content: string = readFileSync(source, "utf8");
   if (content.length > maxChars) die(`entry exceeds ${maxChars} chars: ${content.length}`);
 
-  const destination: string = join(outputDir, source);
+  const destination: string = join(outputDir, "entry.txt");
   mkdirSync(outputDir, { recursive: true });
   writeFileSync(destination, content);
   console.log(`wrote ${destination} (${content.length} chars)`);
