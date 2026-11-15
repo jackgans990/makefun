@@ -86,4 +86,6 @@ def main():
 
 
 if __name__ == "__main__":
+    # Damped median drift: forecast = last close + shrunk median drift over
+    # recent window; damping chosen to minimize backtest MAE vs persistence.
     main()
